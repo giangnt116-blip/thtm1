@@ -150,7 +150,12 @@ export default function App() {
               <ArrowLeft className="w-4 h-4" />
               <span>Về Trang chủ</span>
             </button>
-            <LogicGateSimulator />
+            <LogicGateSimulator
+              onNavigate={(path) => {
+                setCurrentPath(path);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
           </div>
         )}
 
@@ -163,7 +168,12 @@ export default function App() {
               <ArrowLeft className="w-4 h-4" />
               <span>Về Trang chủ</span>
             </button>
-            <RuleMachineSimulator />
+            <RuleMachineSimulator
+              onNavigate={(path) => {
+                setCurrentPath(path);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
           </div>
         )}
 

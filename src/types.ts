@@ -12,7 +12,15 @@ export type SkillType =
   | 'multiple-AND'
   | 'rule-machine'
   | 'transformation'
-  | 'constraints';
+  | 'constraints'
+  | 'simple-repeat'
+  | 'constant-step'
+  | 'logic-and'
+  | 'logic-or'
+  | 'rule-inference'
+  | 'hypothesis-testing'
+  | 'multi-condition-filtering'
+  | 'return-state-pattern';
 
 export type QuestionType = 'choice' | 'text' | 'multi-select' | 'fill-blanks';
 
@@ -32,6 +40,14 @@ export interface Question {
   acceptedAnswers?: string[]; // alternative accepted formats
 }
 
+export interface LogicCardDetail {
+  id: string;
+  color: string;
+  shape: string;
+  number: number;
+  label: string;
+}
+
 export interface ChallengeQuestion {
   id: string;
   prompt: string;
@@ -41,6 +57,17 @@ export interface ChallengeQuestion {
   acceptedAnswers?: string[];
   explanation?: string;
   skill: SkillType;
+  difficulty?: number;
+  isBoss?: boolean;
+  category: 'pattern' | 'logic' | 'machine';
+  cards?: LogicCardDetail[];
+  repairPrompt?: string;
+  repairType?: QuestionType;
+  repairOptions?: string[];
+  repairAnswer?: string;
+  repairAcceptedAnswers?: string[];
+  repairExplanation?: string;
+  misconceptionId?: string;
 }
 
 export interface UserAnswerRecord {
@@ -61,6 +88,13 @@ export interface ChallengeRecord {
   answers: Record<string, { userAnswer: string; isCorrect: boolean; confidence?: ConfidenceLevel }>;
   completedAt?: number;
   timeSpentSeconds?: number;
+  repairs?: Record<string, { used: boolean; success: boolean }>;
+  skillResults?: {
+    pattern: { correct: number; total: number };
+    logic: { correct: number; total: number };
+    machine: { correct: number; total: number };
+  };
+  misconceptions?: string[];
 }
 
 export interface UserProgressData {

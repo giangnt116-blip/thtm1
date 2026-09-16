@@ -31,7 +31,7 @@ export function HintPanel({
           </div>
           <div>
             <h4 className="text-sm font-bold text-slate-800">
-              Gợi ý của Thám tử ({hintsUsed}/3)
+              💡 Con đang bí? ({hintsUsed}/3)
             </h4>
             <p className="text-xs text-slate-500">
               Cố gắng tự suy luận trước khi mở gợi ý để giành đủ 3 ⭐ nhé!
@@ -44,21 +44,21 @@ export function HintPanel({
       <div className="space-y-2 mb-3">
         {hintsUsed >= 1 && (
           <div className="p-3 bg-amber-50/90 rounded-xl border border-amber-200 text-xs md:text-sm text-slate-800 animate-fadeIn flex gap-2">
-            <span className="font-bold text-amber-700 shrink-0">Gợi ý 1:</span>
+            <span className="font-bold text-amber-700 shrink-0">1. Gợi ý nhỏ:</span>
             <span>{hints[0]}</span>
           </div>
         )}
 
         {hintsUsed >= 2 && (
           <div className="p-3 bg-amber-50/90 rounded-xl border border-amber-200 text-xs md:text-sm text-slate-800 animate-fadeIn flex gap-2">
-            <span className="font-bold text-amber-700 shrink-0">Gợi ý 2:</span>
+            <span className="font-bold text-amber-700 shrink-0">2. Gợi ý thêm:</span>
             <span>{hints[1]}</span>
           </div>
         )}
 
         {hintsUsed >= 3 && (
           <div className="p-3 bg-amber-50/90 rounded-xl border border-amber-200 text-xs md:text-sm text-slate-800 animate-fadeIn flex gap-2">
-            <span className="font-bold text-amber-700 shrink-0">Gợi ý 3:</span>
+            <span className="font-bold text-amber-700 shrink-0">3. Cùng làm một bước nhé:</span>
             <span>{hints[2]}</span>
           </div>
         )}
@@ -72,7 +72,7 @@ export function HintPanel({
             className="px-3.5 py-2 min-h-[44px] rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs md:text-sm transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             <Lightbulb className="w-4 h-4" />
-            <span>Mở Gợi ý 1</span>
+            <span>Mở: 1. Gợi ý nhỏ</span>
           </button>
         )}
 
@@ -82,7 +82,7 @@ export function HintPanel({
             className="px-3.5 py-2 min-h-[44px] rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs md:text-sm transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             <Lightbulb className="w-4 h-4" />
-            <span>Mở Gợi ý 2</span>
+            <span>Mở: 2. Gợi ý thêm</span>
           </button>
         )}
 
@@ -92,7 +92,7 @@ export function HintPanel({
             className="px-3.5 py-2 min-h-[44px] rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs md:text-sm transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             <Lightbulb className="w-4 h-4" />
-            <span>Mở Gợi ý 3 (Gợi ý then chốt)</span>
+            <span>Mở: 3. Cùng làm một bước nhé</span>
           </button>
         )}
 

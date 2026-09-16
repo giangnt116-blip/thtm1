@@ -64,29 +64,29 @@ export function calculateStars(
 export function getChallengeGrade(score: number): { label: string; badgeColor: string; description: string } {
   if (score >= 90) {
     return {
-      label: 'Master Week 01 🏆',
+      label: 'Thám tử Siêu hạng 🏆',
       badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-      description: 'Xuất sắc! Em đã hoàn toàn làm chủ tư duy quy luật và logic của Week 01.',
+      description: 'Xuất sắc! Con đã làm chủ mọi bí quyết thám tử của Week 01.',
     };
   }
   if (score >= 70) {
     return {
-      label: 'Đạt Week 01 ⭐',
+      label: 'Thám tử Vững vàng 🌟',
       badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
-      description: 'Rất tốt! Em đã nắm vững hầu hết các dạng bài thám tử quy luật.',
+      description: 'Rất tốt! Con đã nắm vững các bí quyết quan sát và suy luận.',
     };
   }
   if (score >= 50) {
     return {
-      label: 'Đang hình thành 💡',
+      label: 'Thám tử Đang tiến bộ 🚀',
       badgeColor: 'bg-amber-100 text-amber-800 border-amber-300',
-      description: 'Khá tốt! Em đã hiểu các quy tắc cơ bản, hãy ôn thêm các câu hỏi phức hợp.',
+      description: 'Khá tốt! Con đang trên đà tiến bộ, hãy cùng hoàn thiện thêm các thử thách nhé.',
     };
   }
   return {
-    label: 'Cần luyện lại 🔍',
-    badgeColor: 'bg-rose-100 text-rose-800 border-rose-300',
-    description: 'Đừng nản lòng! Hãy quay lại các phòng thí nghiệm mô phỏng để quan sát kỹ hơn nhé.',
+    label: 'Mình luyện thêm một chút nhé 🌱',
+    badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+    description: 'Không sao cả! Dùng chế độ Sửa câu hỏi hoặc quay lại các phòng mô phỏng để khám phá lại quy luật nhé.',
   };
 }
 
@@ -212,10 +212,12 @@ export function analyzeSkills(
     switch (skill) {
       case 'structural-observation':
       case 'direction-pattern':
+      case 'simple-repeat':
         return 'Quan sát';
       case 'repeating-pattern':
         return 'Quy luật lặp';
       case 'numeric-pattern':
+      case 'constant-step':
         return 'Quy luật số';
       case 'alternating-rule':
         return 'Quy luật xen kẽ';
@@ -223,16 +225,22 @@ export function analyzeSkills(
         return 'Dual Track';
       case 'AND':
       case 'multiple-AND':
+      case 'logic-and':
         return 'AND';
       case 'OR':
+      case 'logic-or':
         return 'OR';
       case 'NOT':
       case 'AND-NOT':
         return 'NOT';
       case 'rule-machine':
       case 'transformation':
+      case 'rule-inference':
+      case 'hypothesis-testing':
+      case 'return-state-pattern':
         return 'Rule Machine';
       case 'constraints':
+      case 'multi-condition-filtering':
         return 'Constraints';
       default:
         return 'Quan sát';

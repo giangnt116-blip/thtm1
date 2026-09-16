@@ -42,7 +42,9 @@ export function Home({
   const m1Done =
     exploredSims.includes('pattern') ||
     completedLessons.includes('pattern') ||
-    q1to7Done >= 4;
+    q1to7Done >= 4 ||
+    localStorage.getItem('week01.missions.pattern.completed') === 'true' ||
+    localStorage.getItem('week01.pattern.completed') === 'true';
   const m1Started =
     m1Done ||
     exploredSims.includes('pattern') ||
@@ -50,12 +52,15 @@ export function Home({
     q1to7Done > 0;
 
   // Mission 2: Cong Logic (Unlocked when Mission 1 is done)
-  const m2Unlocked = m1Done;
+  const m2Unlocked = m1Done || localStorage.getItem('week01.missions.logic.unlocked') === 'true';
   const m2Done =
     m2Unlocked &&
     (exploredSims.includes('logic') ||
       completedLessons.includes('logic') ||
-      q8to14Done >= 4);
+      q8to14Done >= 4 ||
+      localStorage.getItem('week01.missions.logic.completed') === 'true' ||
+      localStorage.getItem('week01.logic.completed') === 'true' ||
+      localStorage.getItem('week01.badges.nguoi_gac_cong') === 'true');
   const m2Started =
     m2Unlocked &&
     (m2Done ||
@@ -64,12 +69,17 @@ export function Home({
       q8to14Done > 0);
 
   // Mission 3: Xuong Robot (Unlocked when Mission 2 is done)
-  const m3Unlocked = m2Done;
+  const m3Unlocked = m2Done || localStorage.getItem('week01.missions.machine.unlocked') === 'true';
   const m3Done =
     m3Unlocked &&
     (exploredSims.includes('machine') ||
       completedLessons.includes('machine') ||
-      q15to20Done >= 3);
+      q15to20Done >= 3 ||
+      localStorage.getItem('week01.missions.machine.completed') === 'true' ||
+      localStorage.getItem('week01.missions.robot.completed') === 'true' ||
+      localStorage.getItem('week01.machine.completed') === 'true' ||
+      localStorage.getItem('week01.robot.completed') === 'true' ||
+      localStorage.getItem('week01.badges.ky_su_nhi') === 'true');
   const m3Started =
     m3Unlocked &&
     (m3Done ||
@@ -85,7 +95,7 @@ export function Home({
   const stagesCount =
     (m1Done ? 1 : 0) + (m2Done ? 1 : 0) + (m3Done ? 1 : 0) + (challengeDone ? 1 : 0);
 
-  // Next recommended task
+  // Next recommended task according to progress (0/4, 1/4, 2/4, 3/4, 4/4)
   let nextAction = {
     title: 'Phòng Quan sát',
     path: '/sim/pattern',
@@ -96,31 +106,31 @@ export function Home({
     nextAction = {
       title: 'Phòng Quan sát',
       path: '/sim/pattern',
-      text: m1Started ? '🚀 Tiếp tục: Phòng Quan sát' : '🚀 Bắt đầu: Phòng Quan sát',
+      text: '🚀 Bắt đầu: Phòng Quan sát',
     };
   } else if (!m2Done) {
     nextAction = {
       title: 'Cổng Logic',
       path: '/sim/logic',
-      text: m2Started ? '🚀 Tiếp tục: Cổng Logic' : '🚀 Bắt đầu: Cổng Logic',
+      text: '🚦 Tiếp tục: Cổng Logic',
     };
   } else if (!m3Done) {
     nextAction = {
       title: 'Xưởng Robot',
       path: '/sim/machine',
-      text: m3Started ? '🚀 Tiếp tục: Xưởng Robot' : '🚀 Bắt đầu: Xưởng Robot',
+      text: '🤖 Tiếp tục: Xưởng Robot',
     };
   } else if (!challengeDone) {
     nextAction = {
       title: 'Thử thách cuối tuần',
       path: '/challenge',
-      text: '🏆 Vào Thử thách cuối tuần',
+      text: '🏆 Thử thách cuối tuần',
     };
   } else {
     nextAction = {
-      title: 'Luyện kỹ năng',
-      path: '/practice',
-      text: '🎯 Luyện thêm kỹ năng để gom đủ 60 sao',
+      title: 'Xem thành tích Week 01',
+      path: '/challenge',
+      text: '🎉 Xem thành tích Week 01',
     };
   }
 
@@ -175,39 +185,92 @@ export function Home({
 
   return (
     <div className="space-y-6 sm:space-y-8 animate-fadeIn pb-12">
-      {/* 1. HERO WELCOME CARD */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white p-6 sm:p-8 shadow-md">
-        <div className="relative z-10 max-w-2xl space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold text-amber-300 border border-white/20">
-            <span>Week 01 • Thám tử Quy luật 🔍</span>
-          </div>
+      {/* 1. HERO WELCOME CARD OR WEEK 01 COMPLETED CARD */}
+      {challengeDone ? (
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-950 text-white p-6 sm:p-8 shadow-xl border border-amber-400/30">
+          <div className="relative z-10 max-w-2xl space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 backdrop-blur-md text-xs font-black text-amber-300 border border-amber-400/40">
+              <span>🏆 WEEK 01 HOÀN THÀNH XUẤT SẮC!</span>
+            </div>
 
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white">
-            👋 Chào Thám tử!
-          </h1>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white flex items-center gap-3">
+              <span>🎉 Con đã hoàn thành Week 01!</span>
+            </h1>
 
-          <p className="text-sm sm:text-base md:text-lg text-blue-50 leading-relaxed font-medium">
-            Hôm nay con sẽ tìm những quy luật đang ẩn trong hình, số và máy móc.
-          </p>
+            <p className="text-sm sm:text-base text-amber-100 font-medium">
+              Thám tử nhí đã xuất sắc vượt qua cả 3 nhiệm vụ và Thử thách Thám tử.
+            </p>
 
-          <p className="text-xs sm:text-sm text-blue-200">
-            Không cần làm thật nhanh. Chỉ cần quan sát thật kỹ. 👀
-          </p>
+            {/* 3 Key Takeaways */}
+            <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/15 text-xs sm:text-sm text-slate-100 space-y-2">
+              <div className="font-bold text-amber-300">Tuần này con đã biết:</div>
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400 font-bold">✅</span>
+                <span>Tìm điều đang lặp</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400 font-bold">✅</span>
+                <span>Kiểm tra từng điều kiện</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-emerald-400 font-bold">✅</span>
+                <span>Đoán và thử quy tắc</span>
+              </div>
+            </div>
 
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={() => onNavigate(nextAction.path)}
-              className="min-h-[48px] px-6 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-sm sm:text-base flex items-center gap-2 cursor-pointer shadow-md transition-transform"
-            >
-              <span>{nextAction.text}</span>
-              <ArrowRight className="w-5 h-5" />
-            </button>
+            <div className="pt-2 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => onNavigate('/challenge')}
+                className="min-h-[48px] px-6 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm sm:text-base flex items-center gap-2 cursor-pointer shadow-md transition-transform hover:scale-105"
+              >
+                <span>🎉 Xem thành tích Week 01</span>
+                <ArrowRight className="w-5 h-5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate('/practice')}
+                className="min-h-[48px] px-6 py-3 rounded-2xl bg-white/15 hover:bg-white/25 text-white font-bold text-sm sm:text-base flex items-center gap-2 cursor-pointer border border-white/20 transition-transform hover:scale-105"
+              >
+                <span>🔄 Luyện lại kỹ năng</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-600 to-blue-700 text-white p-6 sm:p-8 shadow-md">
+          <div className="relative z-10 max-w-2xl space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-bold text-amber-300 border border-white/20">
+              <span>Week 01 • Thám tử Quy luật 🔍</span>
+            </div>
 
-      {/* 2. TIẾN ĐỘ TUẦN (4 CHẶNG RÕ RÀNG) */}
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-white">
+              👋 Chào Thám tử!
+            </h1>
+
+            <p className="text-sm sm:text-base md:text-lg text-blue-50 leading-relaxed font-medium">
+              Hôm nay con sẽ tìm những quy luật đang ẩn trong hình, số và máy móc.
+            </p>
+
+            <p className="text-xs sm:text-sm text-blue-200">
+              Không cần làm thật nhanh. Chỉ cần quan sát thật kỹ. 👀
+            </p>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => onNavigate(nextAction.path)}
+                className="min-h-[48px] px-6 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-sm sm:text-base flex items-center gap-2 cursor-pointer shadow-md transition-transform"
+              >
+                <span>{nextAction.text}</span>
+                <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2. TIẾN ĐỘ TUẦN (4 BƯỚC RÕ RÀNG) */}
       <div className="bg-white rounded-3xl border border-slate-200/90 p-5 sm:p-6 shadow-xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -215,7 +278,7 @@ export function Home({
               <span>🗺️ Tiến độ tuần</span>
             </h2>
             <p className="text-xs text-slate-500 font-medium">
-              Con đã hoàn thành <strong className="text-blue-600 font-black">{stagesCount}/4</strong> chặng.
+              Con đã hoàn thành <strong className="text-blue-600 font-black">{stagesCount}/4</strong> nhiệm vụ.
             </p>
           </div>
 
@@ -245,7 +308,7 @@ export function Home({
                 : 'bg-slate-50 border-slate-200 text-slate-600'
             }`}
           >
-            <div className="text-[11px] opacity-75">Chặng 1</div>
+            <div className="text-[11px] opacity-75">Nhiệm vụ 1</div>
             <div className="text-xs sm:text-sm font-black mt-0.5 truncate">
               🔍 Phòng Quan sát
             </div>
@@ -263,7 +326,7 @@ export function Home({
                 : 'bg-slate-50/70 border-slate-200 text-slate-400'
             }`}
           >
-            <div className="text-[11px] opacity-75">Chặng 2</div>
+            <div className="text-[11px] opacity-75">Nhiệm vụ 2</div>
             <div className="text-xs sm:text-sm font-black mt-0.5 truncate">
               🚦 Cổng Logic
             </div>
@@ -281,7 +344,7 @@ export function Home({
                 : 'bg-slate-50/70 border-slate-200 text-slate-400'
             }`}
           >
-            <div className="text-[11px] opacity-75">Chặng 3</div>
+            <div className="text-[11px] opacity-75">Nhiệm vụ 3</div>
             <div className="text-xs sm:text-sm font-black mt-0.5 truncate">
               🤖 Xưởng Robot
             </div>
@@ -299,9 +362,9 @@ export function Home({
                 : 'bg-slate-50/70 border-slate-200 text-slate-400'
             }`}
           >
-            <div className="text-[11px] opacity-75">Chặng 4</div>
+            <div className="text-[11px] opacity-75">Thử thách</div>
             <div className="text-xs sm:text-sm font-black mt-0.5 truncate">
-              🏆 Thử thách
+              🏆 Thử thách cuối tuần
             </div>
             <div className="text-[10px] mt-1 font-bold">
               {challengeDone
@@ -314,7 +377,7 @@ export function Home({
         </div>
       </div>
 
-      {/* 3. HUY HIỆU DANH DỰ (3 HUY HIỆU THÁM TỬ) */}
+      {/* 3. HUY HIỆU DANH DỰ (4 HUY HIỆU THÁM TỬ) */}
       <div className="bg-slate-100/70 rounded-3xl p-4 sm:p-5 border border-slate-200/80">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
@@ -325,17 +388,19 @@ export function Home({
           </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
           {/* Badge 1: Mat Cu */}
           <div
             className={`p-3 rounded-2xl border text-center transition-all ${
               m1Done
-                ? 'bg-white border-amber-300 shadow-xs ring-2 ring-amber-200'
-                : 'bg-slate-50 border-slate-200 opacity-50 grayscale'
+                ? 'bg-white border-amber-300 shadow-xs ring-2 ring-amber-200 animate-fadeIn'
+                : 'bg-slate-50 border-slate-200 text-slate-500'
             }`}
           >
-            <div className="text-2xl sm:text-3xl mb-1">🦉</div>
-            <div className="text-xs sm:text-sm font-black text-slate-900">Mắt Cú</div>
+            <div className={`text-2xl sm:text-3xl mb-1 ${m1Done ? '' : 'grayscale opacity-50'}`}>🦉</div>
+            <div className={`text-xs sm:text-sm font-black ${m1Done ? 'text-slate-900' : 'text-slate-600'}`}>
+              🔍 Mắt Cú
+            </div>
             <div className="text-[10px] text-slate-500 mt-0.5">
               {m1Done ? '⭐ Đã nhận' : 'Phòng Quan sát'}
             </div>
@@ -345,13 +410,13 @@ export function Home({
           <div
             className={`p-3 rounded-2xl border text-center transition-all ${
               m2Done
-                ? 'bg-white border-amber-300 shadow-xs ring-2 ring-amber-200'
-                : 'bg-slate-50 border-slate-200 opacity-50 grayscale'
+                ? 'bg-white border-amber-300 shadow-xs ring-2 ring-amber-200 animate-fadeIn'
+                : 'bg-slate-50 border-slate-200 text-slate-500'
             }`}
           >
-            <div className="text-2xl sm:text-3xl mb-1">🛡️</div>
-            <div className="text-xs sm:text-sm font-black text-slate-900">
-              Người Gác Cổng
+            <div className={`text-2xl sm:text-3xl mb-1 ${m2Done ? '' : 'grayscale opacity-50'}`}>🛡️</div>
+            <div className={`text-xs sm:text-sm font-black ${m2Done ? 'text-slate-900' : 'text-slate-600'}`}>
+              🚦 Người Gác Cổng
             </div>
             <div className="text-[10px] text-slate-500 mt-0.5">
               {m2Done ? '⭐ Đã nhận' : 'Cổng Logic'}
@@ -362,14 +427,33 @@ export function Home({
           <div
             className={`p-3 rounded-2xl border text-center transition-all ${
               m3Done
-                ? 'bg-white border-amber-300 shadow-xs ring-2 ring-amber-200'
-                : 'bg-slate-50 border-slate-200 opacity-50 grayscale'
+                ? 'bg-white border-amber-300 shadow-xs ring-2 ring-amber-200 animate-fadeIn'
+                : 'bg-slate-50 border-slate-200 text-slate-500'
             }`}
           >
-            <div className="text-2xl sm:text-3xl mb-1">⚙️</div>
-            <div className="text-xs sm:text-sm font-black text-slate-900">Kỹ Sư Nhí</div>
+            <div className={`text-2xl sm:text-3xl mb-1 ${m3Done ? '' : 'grayscale opacity-50'}`}>⚙️</div>
+            <div className={`text-xs sm:text-sm font-black ${m3Done ? 'text-slate-900' : 'text-slate-600'}`}>
+              🤖 Kỹ Sư Nhí
+            </div>
             <div className="text-[10px] text-slate-500 mt-0.5">
               {m3Done ? '⭐ Đã nhận' : 'Xưởng Robot'}
+            </div>
+          </div>
+
+          {/* Badge 4: Tham Tu Quy Luat */}
+          <div
+            className={`p-3 rounded-2xl border text-center transition-all ${
+              challengeDone
+                ? 'bg-gradient-to-b from-amber-50 to-amber-100 border-amber-400 shadow-xs ring-2 ring-amber-300 animate-fadeIn'
+                : 'bg-slate-50 border-slate-200 text-slate-500'
+            }`}
+          >
+            <div className={`text-2xl sm:text-3xl mb-1 ${challengeDone ? '' : 'grayscale opacity-50'}`}>🏆</div>
+            <div className={`text-xs sm:text-sm font-black ${challengeDone ? 'text-slate-900' : 'text-slate-600'}`}>
+              🏆 Thám tử Quy luật
+            </div>
+            <div className="text-[10px] text-slate-500 mt-0.5">
+              {challengeDone ? '⭐ Huy hiệu tuần' : 'Thử thách cuối tuần'}
             </div>
           </div>
         </div>

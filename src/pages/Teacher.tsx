@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { UserAnswerRecord, ChallengeRecord } from '../types';
-import { calculateTeacherAnalytics } from '../utils/scoring';
+import { calculateTeacherAnalytics, getChallengeGrade } from '../utils/scoring';
+import { CHALLENGE_QUESTIONS } from '../data/week01';
 import { storage } from '../utils/storage';
-import { ArrowLeft, Users, AlertTriangle, CheckCircle2, HelpCircle, Sparkles, RefreshCw, Trash2, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Users, AlertTriangle, CheckCircle2, HelpCircle, Sparkles, RefreshCw, Trash2, ShieldAlert, Award, Wrench } from 'lucide-react';
 
 interface TeacherProps {
   answers: Record<string, UserAnswerRecord>;
@@ -287,6 +288,456 @@ export function Teacher({ answers, challenge, onNavigate, onResetProgress }: Tea
           })}
         </div>
       </div>
+
+      {/* Logic Gates Room Diagnostics (Nhiệm vụ 2: Cổng Logic 5 Màn) */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-5 md:p-7 shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base md:text-lg font-black text-slate-900 flex items-center gap-2">
+              <span>🚦 Chẩn đoán Nhiệm vụ 2: Cổng Logic</span>
+            </h3>
+            <p className="text-xs text-slate-500">
+              Theo dõi sự phân biệt VÀ – HOẶC – KHÔNG và khả năng lọc đa điều kiện.
+            </p>
+          </div>
+          <span className="px-3 py-1 rounded-full text-xs font-black bg-indigo-50 text-indigo-700 border border-indigo-200">
+            5 Cửa ải logic
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-1">
+          {[
+            {
+              id: 1,
+              title: 'Cửa 1: Cổng đơn',
+              sub: 'Single condition filter',
+              misKey: 'week01.logic.stage01.misconception',
+              misMap: {
+                ignores_single_condition: 'Chưa kiểm tra kỹ điều kiện đơn',
+              },
+            },
+            {
+              id: 2,
+              title: 'Cửa 2: Cổng VÀ',
+              sub: 'Logic AND (Tất cả đúng)',
+              misKey: 'week01.logic.stage02.misconception',
+              misMap: {
+                logic_and_partial: 'Hiểu nhầm: Nghĩ chỉ cần thỏa 1 điều kiện',
+              },
+            },
+            {
+              id: 3,
+              title: 'Cửa 3: Cổng HOẶC',
+              sub: 'Logic OR (Ít nhất 1 đúng)',
+              misKey: 'week01.logic.stage03.misconception',
+              misMap: {
+                or_exactly_one: 'Bỏ qua TH thỏa cả 2 (hiểu lầm HOẶC)',
+                or_invalid_candidate: 'Chọn số không thỏa điều kiện nào',
+              },
+              confKey: 'week01.logic.stage03.confidence',
+            },
+            {
+              id: 4,
+              title: 'Cửa 4: Cổng KHÔNG',
+              sub: 'Logic NOT (Phép loại trừ)',
+              misKey: 'week01.logic.stage04.misconception',
+              misMap: {
+                not_confusion: 'Nhầm lẫn lệnh cấm (chọn hình bị cấm)',
+              },
+            },
+            {
+              id: 5,
+              title: 'Cửa 5: Cổng Bí Mật',
+              sub: 'Multi-step filtering (Boss)',
+              misKey: 'week01.logic.stage05.misconception',
+              misMap: {
+                skips_filtering: 'Đoán mò thay vì lọc từng bước',
+              },
+              confKey: 'week01.logic.stage05.confidence',
+            },
+          ].map((st) => {
+            const stageDone = localStorage.getItem('week01.logic.stages_done')
+              ? JSON.parse(localStorage.getItem('week01.logic.stages_done') || '{}')[st.id]
+              : false;
+            const stars = localStorage.getItem('week01.logic.stars')
+              ? JSON.parse(localStorage.getItem('week01.logic.stars') || '{}')[st.id] || 0
+              : 0;
+            const misVal = localStorage.getItem(st.misKey);
+            const confVal = st.confKey ? localStorage.getItem(st.confKey) : null;
+
+            return (
+              <div
+                key={st.id}
+                className={`p-3.5 rounded-2xl border flex flex-col justify-between ${
+                  stageDone ? 'bg-slate-50 border-slate-200' : 'bg-slate-50/50 border-slate-100 opacity-60'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between text-xs font-black">
+                    <span className="text-slate-800">{st.title}</span>
+                    <span className="text-amber-500 font-bold">{stars ? `⭐ ${stars}` : '○'}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-medium mt-0.5">{st.sub}</div>
+
+                  {misVal && (
+                    <div className="mt-2 p-1.5 rounded-lg bg-rose-50 border border-rose-200 text-[10px] text-rose-800 font-semibold">
+                      ⚠️ {st.misMap[misVal as keyof typeof st.misMap] || misVal}
+                    </div>
+                  )}
+
+                  {confVal && (
+                    <div className="mt-2 text-[10px] font-bold text-slate-600">
+                      Tự tin:{' '}
+                      <span className="text-blue-600">
+                        {confVal === 'confident'
+                          ? 'Rất tự tin'
+                          : confVal === 'guessing'
+                          ? 'Đoán / thử'
+                          : 'Chưa hiểu'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-2 pt-2 border-t border-slate-200/60 text-[10px] font-bold text-slate-500">
+                  {stageDone ? '✅ Đã hoàn thành' : '⏳ Chưa hoàn thành'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Robot Workshop Room Diagnostics (Nhiệm vụ 3: Xưởng Robot 5 Màn) */}
+      <div className="bg-white rounded-3xl border border-slate-200 p-5 md:p-7 shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base md:text-lg font-black text-slate-900 flex items-center gap-2">
+              <span>🤖 Chẩn đoán Nhiệm vụ 3: Xưởng Robot</span>
+            </h3>
+            <p className="text-xs text-slate-500">
+              Theo dõi quá trình đoán quy tắc, chủ động kiểm chứng bằng dữ liệu mới và tách chữ - số.
+            </p>
+          </div>
+          <span className="px-3 py-1 rounded-full text-xs font-black bg-purple-50 text-purple-700 border border-purple-200">
+            5 Màn thực nghiệm
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 pt-1">
+          {[
+            {
+              id: 1,
+              title: 'Màn 1: Máy cộng',
+              sub: 'input-output-basic',
+              stageKey: 'week01.robot.stage01',
+            },
+            {
+              id: 2,
+              title: 'Màn 2: Máy hai bước',
+              sub: 'two-step-rule',
+              stageKey: 'week01.robot.stage02',
+              misKey: 'week01.robot.stage02.misconception',
+              misMap: {
+                fits_one_example_only: 'Kết luận vội sau 1 ví dụ (chọn +3)',
+              },
+            },
+            {
+              id: 3,
+              title: 'Màn 3: Đừng vội kết luận',
+              sub: 'hypothesis-checking',
+              stageKey: 'week01.robot.stage03',
+              misKey: 'week01.robot.stage03.misconception',
+              misMap: {
+                fits_one_example_only: 'Kết luận vội sau 1 ví dụ (chọn +3)',
+              },
+              confKey: 'week01.robot.stage03.confidence',
+            },
+            {
+              id: 4,
+              title: 'Màn 4: Tự chọn số để thử',
+              sub: 'self-testing',
+              stageKey: 'week01.robot.stage04',
+              misKey: 'week01.robot.stage04.misconception',
+              misMap: {
+                cannot_compare_prediction: 'Chưa so sánh dự đoán với kết quả máy',
+              },
+            },
+            {
+              id: 5,
+              title: 'Màn 5: Robot chữ & số',
+              sub: 'symbol-transformation',
+              stageKey: 'week01.robot.stage05',
+              misKey: 'week01.robot.stage05.misconception',
+              misMap: {
+                cannot_separate_text_number: 'Chưa biết tách chữ và số',
+                does_not_detect_return_state: 'Chưa nhận ra trạng thái quay lại ban đầu',
+              },
+              confKey: 'week01.robot.stage05.confidence',
+            },
+          ].map((st) => {
+            const stageDone = localStorage.getItem('week01.robot.stages_done')
+              ? JSON.parse(localStorage.getItem('week01.robot.stages_done') || '{}')[st.id]
+              : false;
+            const stars = localStorage.getItem('week01.robot.stars')
+              ? JSON.parse(localStorage.getItem('week01.robot.stars') || '{}')[st.id] || 0
+              : 0;
+            const misVal = st.misKey ? localStorage.getItem(st.misKey) : null;
+            const confVal = st.confKey ? localStorage.getItem(st.confKey) : null;
+
+            let stageDetail: any = null;
+            try {
+              const rawDetail = localStorage.getItem(st.stageKey);
+              if (rawDetail) stageDetail = JSON.parse(rawDetail);
+            } catch {
+              // ignore
+            }
+
+            return (
+              <div
+                key={st.id}
+                className={`p-3.5 rounded-2xl border flex flex-col justify-between ${
+                  stageDone ? 'bg-slate-50 border-slate-200' : 'bg-slate-50/50 border-slate-100 opacity-60'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between text-xs font-black">
+                    <span className="text-slate-800">{st.title}</span>
+                    <span className="text-amber-500 font-bold">{stars ? `⭐ ${stars}` : '○'}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-medium mt-0.5">{st.sub}</div>
+
+                  {misVal && (
+                    <div className="mt-2 p-1.5 rounded-lg bg-rose-50 border border-rose-200 text-[10px] text-rose-800 font-semibold">
+                      ⚠️ {(st.misMap && (st.misMap as any)[misVal]) || misVal}
+                    </div>
+                  )}
+
+                  {stageDetail?.testedInputs && stageDetail.testedInputs.length > 0 && (
+                    <div className="mt-2 text-[10px] text-slate-600">
+                      <span className="font-bold">Đã thử số: </span>
+                      <span className="font-mono text-purple-700 font-bold">
+                        {stageDetail.testedInputs.join(', ')}
+                      </span>
+                    </div>
+                  )}
+
+                  {stageDetail?.hypotheses && stageDetail.hypotheses.length > 0 && (
+                    <div className="mt-1 text-[10px] text-slate-600">
+                      <span className="font-bold">Giả thuyết: </span>
+                      <span className="font-mono text-blue-700 font-bold">
+                        {stageDetail.hypotheses.join(', ')}
+                      </span>
+                    </div>
+                  )}
+
+                  {confVal && (
+                    <div className="mt-2 text-[10px] font-bold text-slate-600">
+                      Tự tin:{' '}
+                      <span className="text-blue-600">
+                        {confVal === 'confident'
+                          ? 'Rất tự tin'
+                          : confVal === 'guessing'
+                          ? 'Đoán / thử'
+                          : 'Chưa hiểu'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-2 pt-2 border-t border-slate-200/60 text-[10px] font-bold text-slate-500">
+                  {stageDone ? '✅ Đã hoàn thành' : '⏳ Chưa hoàn thành'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Mini Challenge 01: Thử thách Thám tử Diagnostics */}
+      {(() => {
+        const ch = challenge || storage.getChallenge();
+        let repairsRaw: Record<string, { used: boolean; success: boolean }> = {};
+        try {
+          const raw = localStorage.getItem('week01.challenge.repairs');
+          if (raw) repairsRaw = JSON.parse(raw);
+          else if (ch?.repairs) repairsRaw = ch.repairs;
+        } catch {
+          // ignore
+        }
+
+        const repairsCount = Object.keys(repairsRaw).length;
+        const repairsSuccessCount = Object.values(repairsRaw).filter((r) => r.success).length;
+        const c05Mis = localStorage.getItem('week01.challenge.C05.misconception');
+        const c08Mis = localStorage.getItem('week01.challenge.C08.misconception');
+        const gradeInfo = ch?.completed ? getChallengeGrade(ch.score) : null;
+
+        return (
+          <div className="bg-white rounded-3xl border border-slate-200 p-5 md:p-7 shadow-xs space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base md:text-lg font-black text-slate-900 flex items-center gap-2">
+                  <Award className="w-5 h-5 text-orange-600" />
+                  <span>🏆 Chẩn đoán Mini Challenge 01: Thử thách Thám tử</span>
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Bài kiểm tra chuyển giao năng lực độc lập (10 câu, không gợi ý).
+                </p>
+              </div>
+
+              {ch?.completed ? (
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-black">
+                    {ch.score} / 100 điểm
+                  </span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-black border ${gradeInfo?.badgeColor}`}>
+                    {gradeInfo?.label}
+                  </span>
+                </div>
+              ) : (
+                <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-bold">
+                  Chưa nộp bài Challenge
+                </span>
+              )}
+            </div>
+
+            {ch?.completed ? (
+              <div className="space-y-4">
+                {/* 3 Skill Clusters & Repair stats */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                  {/* Quan sat */}
+                  {(() => {
+                    const list = CHALLENGE_QUESTIONS.filter((q) => q.category === 'pattern');
+                    const correct = list.filter((q) => ch.answers[q.id]?.isCorrect).length;
+                    return (
+                      <div className="p-3.5 rounded-2xl bg-blue-50 border border-blue-200 text-center">
+                        <div className="text-[11px] font-bold text-blue-700">🔍 Quan sát</div>
+                        <div className="text-xl font-black text-blue-900 mt-0.5">
+                          {correct}/{list.length}
+                        </div>
+                        <div className="text-[10px] text-blue-600 mt-1">C01, C02, C04, C06</div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Logic */}
+                  {(() => {
+                    const list = CHALLENGE_QUESTIONS.filter((q) => q.category === 'logic');
+                    const correct = list.filter((q) => ch.answers[q.id]?.isCorrect).length;
+                    return (
+                      <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-center">
+                        <div className="text-[11px] font-bold text-emerald-700">🚦 Logic</div>
+                        <div className="text-xl font-black text-emerald-900 mt-0.5">
+                          {correct}/{list.length}
+                        </div>
+                        <div className="text-[10px] text-emerald-600 mt-1">C03, C05, C09</div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Robot */}
+                  {(() => {
+                    const list = CHALLENGE_QUESTIONS.filter((q) => q.category === 'machine');
+                    const correct = list.filter((q) => ch.answers[q.id]?.isCorrect).length;
+                    return (
+                      <div className="p-3.5 rounded-2xl bg-purple-50 border border-purple-200 text-center">
+                        <div className="text-[11px] font-bold text-purple-700">🤖 Robot</div>
+                        <div className="text-xl font-black text-purple-900 mt-0.5">
+                          {correct}/{list.length}
+                        </div>
+                        <div className="text-[10px] text-purple-600 mt-1">C07, C08, C10 (Boss)</div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Repair Stats */}
+                  <div className="p-3.5 rounded-2xl bg-orange-50 border border-orange-200 text-center">
+                    <div className="text-[11px] font-bold text-orange-700">🔧 Chế độ Sửa câu</div>
+                    <div className="text-xl font-black text-orange-900 mt-0.5">
+                      {repairsSuccessCount}/{repairsCount || 0}
+                    </div>
+                    <div className="text-[10px] text-orange-600 mt-1">Sửa thành công sau drill</div>
+                  </div>
+                </div>
+
+                {/* Detected Misconceptions */}
+                {(c05Mis || c08Mis) && (
+                  <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 space-y-1.5">
+                    <div className="text-xs font-black text-rose-900 flex items-center gap-1.5">
+                      <AlertTriangle className="w-4 h-4 text-rose-600" />
+                      <span>Ngộ nhận phát hiện trong quá trình làm Thử thách:</span>
+                    </div>
+                    <div className="space-y-1 text-xs text-rose-800">
+                      {c05Mis === 'or_exactly_one' && (
+                        <div>
+                          • <strong>Câu 5 (Cổng HOẶC):</strong> Học sinh bỏ qua số 5 vì nghĩ phép HOẶC chỉ được thỏa mãn đúng 1 điều kiện (không được thỏa cả 2).
+                        </div>
+                      )}
+                      {c08Mis === 'fits_one_example_only' && (
+                        <div>
+                          • <strong>Câu 8 (Robot):</strong> Học sinh chọn "Đúng" do chỉ thử với 1 ví dụ đầu tiên (10 → 13), quên thử ví dụ thứ 2 (20 → 33).
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 10 Questions Matrix in Teacher View */}
+                <div className="border border-slate-200 rounded-2xl overflow-hidden text-xs">
+                  <div className="bg-slate-50 p-2.5 font-bold text-slate-700 grid grid-cols-6 gap-2 border-b border-slate-200">
+                    <span className="col-span-1">Mã câu</span>
+                    <span className="col-span-2">Dạng bài</span>
+                    <span className="col-span-1">Kết quả</span>
+                    <span className="col-span-1">Tự tin</span>
+                    <span className="col-span-1 text-right">Sửa câu</span>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {CHALLENGE_QUESTIONS.map((q) => {
+                      const ans = ch.answers[q.id];
+                      const isCorr = ans?.isCorrect;
+                      const rep = repairsRaw[q.id];
+
+                      return (
+                        <div key={q.id} className="p-2.5 grid grid-cols-6 gap-2 items-center hover:bg-slate-50/50">
+                          <span className="col-span-1 font-mono font-bold text-slate-900">
+                            {q.id} {q.isBoss ? '👑' : ''}
+                          </span>
+                          <span className="col-span-2 text-slate-600 truncate">
+                            {q.category === 'pattern' ? 'Quan sát' : q.category === 'logic' ? 'Logic' : 'Robot'} • {q.skill}
+                          </span>
+                          <span className="col-span-1">
+                            {isCorr ? (
+                              <span className="font-bold text-emerald-600">✓ Đúng</span>
+                            ) : (
+                              <span className="font-bold text-rose-600">✕ Chưa đúng</span>
+                            )}
+                          </span>
+                          <span className="col-span-1 text-slate-500 capitalize">
+                            {ans?.confidence || '—'}
+                          </span>
+                          <span className="col-span-1 text-right">
+                            {rep?.success ? (
+                              <span className="text-emerald-700 font-bold">Đã sửa ✓</span>
+                            ) : rep?.used ? (
+                              <span className="text-amber-700 font-bold">Đang thử</span>
+                            ) : (
+                              <span className="text-slate-300">—</span>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500 italic">
+                Học sinh chưa hoàn thành bài Thử thách Thám tử. Khi học sinh làm xong 10 câu, kết quả phân tích năng lực chi tiết và chẩn đoán sửa lỗi sẽ hiển thị tại đây.
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Reset Progress zone */}
       <div className="bg-white rounded-3xl border border-rose-200 p-5 md:p-6 flex flex-wrap items-center justify-between gap-4">

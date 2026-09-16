@@ -13,6 +13,10 @@ export function triggerConfetti(): void {
   }
 }
 
+export function triggerSmallWinConfetti(): void {
+  triggerConfetti();
+}
+
 export function triggerBigWinConfetti(): void {
   try {
     const end = Date.now() + 1500;
