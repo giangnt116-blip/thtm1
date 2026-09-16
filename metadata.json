@@ -1,0 +1,6 @@
+{
+  "name": "M1 Thinking Lab – Week 01",
+  "description": "Thám tử quy luật - Nền tảng học tư duy logic, quy luật và thuật toán cho học sinh luyện thi Tin học trẻ bảng M1",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
