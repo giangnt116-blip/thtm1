@@ -33,6 +33,9 @@ export function PatternSimulator({ onNavigate }: PatternSimulatorProps) {
   const [confidenceStage3, setConfidenceStage3] = useState<string | null>(null);
   const [confidenceStage5, setConfidenceStage5] = useState<string | null>(null);
   const [showConfidenceModal, setShowConfidenceModal] = useState<boolean>(false);
+  const [confidenceTargetStage, setConfidenceTargetStage] = useState<number>(3);
+  const [hasAskedConfidence, setHasAskedConfidence] = useState<Record<number, boolean>>({});
+  const [, setStagePhase] = useState<'playing' | 'completed' | 'confidence' | 'ready-next'>('playing');
 
   // STAGE 1 STATE: Two Colors Alternate
   // 🔴 🔵 🔴 🔵 🔴 ?
@@ -239,10 +242,21 @@ export function PatternSimulator({ onNavigate }: PatternSimulatorProps) {
       setS3Feedback('🚂 Chính xác! Mỗi toa tăng thêm 3.');
       awardStageStars(3);
       triggerConfetti();
-      // Trigger confidence modal for stage 3
-      setTimeout(() => {
-        setShowConfidenceModal(true);
-      }, 1200);
+      setStagePhase('completed');
+      // Trigger confidence modal for stage 3 if not already asked
+      if (!hasAskedConfidence[3]) {
+        setConfidenceTargetStage(3);
+        console.log('[CONFIDENCE] OPEN EFFECT', {
+          stageCompleted: true,
+          confidence: confidenceStage3,
+          hasAskedConfidence: hasAskedConfidence[3],
+          currentStage: 3,
+        });
+        setTimeout(() => {
+          setShowConfidenceModal(true);
+          setStagePhase('confidence');
+        }, 800);
+      }
     } else {
       setS3Feedback('Quy luật của con đúng rồi! Giờ thử tính 13 + 3 nhé.');
     }
@@ -295,10 +309,21 @@ export function PatternSimulator({ onNavigate }: PatternSimulatorProps) {
       setS5Feedback('🧠 Xuất sắc! Tách chữ riêng và số riêng giúp quy luật trở nên thật dễ nhìn.');
       awardStageStars(5);
       triggerConfetti();
-      // Show confidence check after stage 5
-      setTimeout(() => {
-        setShowConfidenceModal(true);
-      }, 1200);
+      setStagePhase('completed');
+      // Show confidence check after stage 5 if not already asked
+      if (!hasAskedConfidence[5]) {
+        setConfidenceTargetStage(5);
+        console.log('[CONFIDENCE] OPEN EFFECT', {
+          stageCompleted: true,
+          confidence: confidenceStage5,
+          hasAskedConfidence: hasAskedConfidence[5],
+          currentStage: 5,
+        });
+        setTimeout(() => {
+          setShowConfidenceModal(true);
+          setStagePhase('confidence');
+        }, 800);
+      }
     } else {
       setS5Feedback('Con kiểm tra lại xem: Chữ sau D là gì? Số sau 7 là mấy?');
       localStorage.setItem('week01.pattern.stage05.misconception', 'cannot_separate_components');
@@ -1549,29 +1574,57 @@ export function PatternSimulator({ onNavigate }: PatternSimulatorProps) {
 
             <div className="grid grid-cols-1 gap-2.5 pt-2">
               {[
-                { label: '😎 Con biết cách làm', val: 'confident' },
-                { label: '🤔 Con phải thử một chút', val: 'guessing' },
-                { label: '🆘 Con vẫn chưa hiểu', val: 'confused' },
+                { label: '😎 Con biết cách làm', val: 'confident', bg: 'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-900' },
+                { label: '🤔 Con phải thử một chút', val: 'guessing', bg: 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-900' },
+                { label: '🆘 Con vẫn chưa hiểu', val: 'confused', bg: 'bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-900' },
+                { label: '⏩ Để sau →', val: 'skipped', bg: 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-600' },
               ].map((opt) => (
                 <button
                   key={opt.val}
                   type="button"
                   onClick={() => {
-                    if (currentStage === 3) {
+                    console.log('[CONFIDENCE] CLICK', opt.val);
+                    console.log('[CONFIDENCE] CLOSING');
+
+                    const targetStage = confidenceTargetStage;
+
+                    // 1. Immediately close modal synchronously & update flags
+                    setShowConfidenceModal(false);
+                    setHasAskedConfidence((prev) => ({ ...prev, [targetStage]: true }));
+                    setStagePhase('ready-next');
+
+                    if (targetStage === 3) {
                       setConfidenceStage3(opt.val);
-                      localStorage.setItem('week01.pattern.stage03.confidence', opt.val);
-                      setShowConfidenceModal(false);
-                      setCurrentStage(4);
-                    } else if (currentStage === 5) {
+                    } else if (targetStage === 5) {
                       setConfidenceStage5(opt.val);
-                      localStorage.setItem('week01.pattern.stage05.confidence', opt.val);
-                      setShowConfidenceModal(false);
-                      handleFinishMission();
                     }
+
+                    // 2. Persist safely
+                    try {
+                      const storageKey = `week01.pattern.stage0${targetStage}.confidence`;
+                      localStorage.setItem(storageKey, opt.val);
+                      console.log(
+                        '[CONFIDENCE] SAVED',
+                        storageKey,
+                        localStorage.getItem(storageKey)
+                      );
+                    } catch (error) {
+                      console.error(error);
+                    }
+
+                    // 3. Advance to next stage smoothly
+                    requestAnimationFrame(() => {
+                      console.log('[CONFIDENCE] NEXT', targetStage);
+                      if (targetStage === 3) {
+                        setCurrentStage(4);
+                      } else if (targetStage === 5) {
+                        handleFinishMission();
+                      }
+                    });
                   }}
-                  className="py-3 px-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 font-bold text-xs sm:text-sm text-slate-800 text-left flex items-center gap-2 cursor-pointer transition-colors min-h-[44px]"
+                  className={`py-3 px-4 rounded-xl border font-bold text-xs sm:text-sm text-left flex items-center justify-between gap-2 cursor-pointer transition-colors min-h-[44px] pointer-events-auto ${opt.bg}`}
                 >
-                  {opt.label}
+                  <span>{opt.label}</span>
                 </button>
               ))}
             </div>

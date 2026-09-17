@@ -76,6 +76,8 @@ export function RuleMachineSimulator({ onNavigate }: RuleMachineSimulatorProps) 
   // Confidence check modal state
   const [showConfidenceModal, setShowConfidenceModal] = useState<boolean>(false);
   const [confidenceStage, setConfidenceStage] = useState<number>(3);
+  const [hasAskedConfidence, setHasAskedConfidence] = useState<Record<number, boolean>>({});
+  const [, setStagePhase] = useState<'playing' | 'completed' | 'confidence' | 'ready-next'>('playing');
 
   // Unlocked check: Mission 2 (Logic Gate) must be completed
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
@@ -224,13 +226,37 @@ export function RuleMachineSimulator({ onNavigate }: RuleMachineSimulatorProps) 
 
     // If Stage 3 completed -> Trigger Confidence Check 1
     if (stageNum === 3) {
-      setConfidenceStage(3);
-      setShowConfidenceModal(true);
+      setStagePhase('completed');
+      if (!hasAskedConfidence[3]) {
+        setConfidenceStage(3);
+        console.log('[CONFIDENCE] OPEN EFFECT', {
+          stageCompleted: true,
+          confidence: null,
+          hasAskedConfidence: hasAskedConfidence[3],
+          currentStage: 3,
+        });
+        setTimeout(() => {
+          setShowConfidenceModal(true);
+          setStagePhase('confidence');
+        }, 800);
+      }
     }
     // If Stage 5 completed -> Trigger Confidence Check 2
     if (stageNum === 5) {
-      setConfidenceStage(5);
-      setShowConfidenceModal(true);
+      setStagePhase('completed');
+      if (!hasAskedConfidence[5]) {
+        setConfidenceStage(5);
+        console.log('[CONFIDENCE] OPEN EFFECT', {
+          stageCompleted: true,
+          confidence: null,
+          hasAskedConfidence: hasAskedConfidence[5],
+          currentStage: 5,
+        });
+        setTimeout(() => {
+          setShowConfidenceModal(true);
+          setStagePhase('confidence');
+        }, 800);
+      }
     }
   };
 
@@ -520,15 +546,39 @@ export function RuleMachineSimulator({ onNavigate }: RuleMachineSimulatorProps) 
   // ----------------------------------------------------
   // CONFIDENCE SUBMIT HANDLER
   // ----------------------------------------------------
-  const handleSaveConfidence = (level: 'confident' | 'guessing' | 'struggling') => {
-    localStorage.setItem(`week01.robot.stage0${confidenceStage}.confidence`, level);
-    setShowConfidenceModal(false);
+  const handleSaveConfidence = (level: string) => {
+    console.log('[CONFIDENCE] CLICK', level);
+    console.log('[CONFIDENCE] CLOSING');
 
-    if (confidenceStage === 3) {
-      switchStage(4);
-    } else if (confidenceStage === 5) {
-      handleFinishMission();
+    const targetStage = confidenceStage;
+
+    // 1. Immediately close modal synchronously & update flags
+    setShowConfidenceModal(false);
+    setHasAskedConfidence((prev) => ({ ...prev, [targetStage]: true }));
+    setStagePhase('ready-next');
+
+    // 2. Persist safely
+    try {
+      const storageKey = `week01.robot.stage0${targetStage}.confidence`;
+      localStorage.setItem(storageKey, level);
+      console.log(
+        '[CONFIDENCE] SAVED',
+        storageKey,
+        localStorage.getItem(storageKey)
+      );
+    } catch (error) {
+      console.error(error);
     }
+
+    // 3. Advance to next stage smoothly
+    requestAnimationFrame(() => {
+      console.log('[CONFIDENCE] NEXT', targetStage);
+      if (targetStage === 3) {
+        switchStage(4);
+      } else if (targetStage === 5) {
+        handleFinishMission();
+      }
+    });
   };
 
   // ----------------------------------------------------
@@ -1783,28 +1833,45 @@ export function RuleMachineSimulator({ onNavigate }: RuleMachineSimulatorProps) 
               <button
                 type="button"
                 onClick={() => handleSaveConfidence('confident')}
-                className="w-full min-h-[46px] p-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 font-bold text-xs sm:text-sm flex items-center gap-2 cursor-pointer transition-colors text-left"
+                className="w-full min-h-[46px] p-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 font-bold text-xs sm:text-sm flex items-center justify-between gap-2 cursor-pointer transition-colors text-left pointer-events-auto"
               >
-                <span className="text-lg">😎</span>
-                <span>Con biết cách làm</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">😎</span>
+                  <span>Con biết cách làm</span>
+                </div>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleSaveConfidence('guessing')}
-                className="w-full min-h-[46px] p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 font-bold text-xs sm:text-sm flex items-center gap-2 cursor-pointer transition-colors text-left"
+                className="w-full min-h-[46px] p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 font-bold text-xs sm:text-sm flex items-center justify-between gap-2 cursor-pointer transition-colors text-left pointer-events-auto"
               >
-                <span className="text-lg">🤔</span>
-                <span>Con phải thử một chút</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🤔</span>
+                  <span>Con phải thử một chút</span>
+                </div>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleSaveConfidence('struggling')}
-                className="w-full min-h-[46px] p-3 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-900 font-bold text-xs sm:text-sm flex items-center gap-2 cursor-pointer transition-colors text-left"
+                className="w-full min-h-[46px] p-3 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-900 font-bold text-xs sm:text-sm flex items-center justify-between gap-2 cursor-pointer transition-colors text-left pointer-events-auto"
               >
-                <span className="text-lg">🆘</span>
-                <span>Con vẫn chưa hiểu</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">🆘</span>
+                  <span>Con vẫn chưa hiểu</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSaveConfidence('skipped')}
+                className="w-full min-h-[46px] p-3 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 font-bold text-xs sm:text-sm flex items-center justify-between gap-2 cursor-pointer transition-colors text-left pointer-events-auto"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⏩</span>
+                  <span>Để sau →</span>
+                </div>
               </button>
             </div>
           </div>

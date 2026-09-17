@@ -64,6 +64,8 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
   // Confidence check modal
   const [showConfidenceModal, setShowConfidenceModal] = useState<boolean>(false);
   const [confidenceStage, setConfidenceStage] = useState<number>(3);
+  const [hasAskedConfidence, setHasAskedConfidence] = useState<Record<number, boolean>>({});
+  const [, setStagePhase] = useState<'playing' | 'completed' | 'confidence' | 'ready-next'>('playing');
 
   // --- STAGE 1 STATE: Single Condition (Chỉ thẻ màu XANH) ---
   const s1Cards: CardItem[] = [
@@ -174,17 +176,47 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
     setStagesDone(updatedDone);
     localStorage.setItem('week01.logic.stages_done', JSON.stringify(updatedDone));
 
-    // Save individual stage diagnostics
+    // Save individual stage diagnostics with full schema
     const stageKey = `week01.logic.stage0${stageNum}`;
     const prev = JSON.parse(localStorage.getItem(stageKey) || '{}');
+    const existingMis = localStorage.getItem(`${stageKey}.misconception`);
+    const misconceptionsList = prev.misconceptions || [];
+    if (existingMis && !misconceptionsList.includes(existingMis)) {
+      misconceptionsList.push(existingMis);
+    }
+
+    localStorage.setItem(
+      stageKey,
+      JSON.stringify({
+        attempts: (prev.attempts || 0) + 1,
+        wrongChoices: prev.wrongChoices || 0,
+        hintLevel,
+        stars: finalStars,
+        confidence: localStorage.getItem(`${stageKey}.confidence`) || null,
+        completed: true,
+        timeSpent: prev.timeSpent || Math.floor((Date.now() - (prev.startTime || Date.now())) / 1000) || 15,
+        misconceptions: misconceptionsList,
+      })
+    );
+  };
+
+  // Helper to record errors & misconceptions
+  const recordStageError = (stageNum: number, misconceptionKey?: string) => {
+    const stageKey = `week01.logic.stage0${stageNum}`;
+    const prev = JSON.parse(localStorage.getItem(stageKey) || '{}');
+    const prevMis = prev.misconceptions || [];
+    if (misconceptionKey && !prevMis.includes(misconceptionKey)) {
+      prevMis.push(misconceptionKey);
+      localStorage.setItem(`${stageKey}.misconception`, misconceptionKey);
+    }
     localStorage.setItem(
       stageKey,
       JSON.stringify({
         ...prev,
-        stageId: stageNum,
-        stars: finalStars,
-        completed: true,
-        hintLevel,
+        attempts: (prev.attempts || 0) + 1,
+        wrongChoices: (prev.wrongChoices || 0) + 1,
+        completed: prev.completed || false,
+        misconceptions: prevMis,
       })
     );
   };
@@ -215,8 +247,7 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
       }
     } else {
       setS1Feedback('🤔 Cổng đang cần màu Xanh. Con nhìn lại màu của thẻ nhé.');
-      // Record misconception for teacher view
-      localStorage.setItem('week01.logic.stage01.misconception', 'ignores_single_condition');
+      recordStageError(1, 'ignores_single_condition');
     }
   };
 
@@ -234,7 +265,7 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
         setS2Feedback(
           `✅ Cửa 1 (Màu Xanh): Đúng | Cửa 2 (Số chẵn): Đúng. Cả hai điều kiện đều đúng nên thẻ ${card.number} được qua cổng!`
         );
-        // Both 201 and 202 passed
+        // Both blue even cards passed
         if (next.length >= 2) {
           setS2Done(true);
           awardStageStars(2);
@@ -247,18 +278,19 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
       // Diagnostic check for misconception: student thought partial match was enough
       if (isBlue && !isEven) {
         setS2Feedback(
-          `Cửa 1 (Màu Xanh): Đúng | Cửa 2 (Số chẵn): Sai (số ${card.number} là số lẻ). Với từ VÀ, tất cả điều kiện đều phải đúng mới được qua!`
+          `Thẻ này mới vượt qua 1 cửa thôi. Cửa 1 (Màu Xanh): Đúng | Cửa 2 (Số chẵn): Sai (số ${card.number} là số lẻ). Với từ VÀ, tất cả điều kiện đều phải đúng mới được qua!`
         );
-        localStorage.setItem('week01.logic.stage02.misconception', 'logic_and_partial');
+        recordStageError(2, 'logic_and_partial');
       } else if (!isBlue && isEven) {
         setS2Feedback(
-          `Cửa 1 (Màu Xanh): Sai (thẻ màu ${card.color === 'red' ? 'Đỏ' : 'Vàng'}) | Cửa 2 (Số chẵn): Đúng. Với từ VÀ, tất cả điều kiện đều phải đúng mới được qua!`
+          `Thẻ này mới vượt qua 1 cửa thôi. Cửa 1 (Màu Xanh): Sai (thẻ màu ${card.color === 'red' ? 'Đỏ' : 'Vàng'}) | Cửa 2 (Số chẵn): Đúng. Với từ VÀ, tất cả điều kiện đều phải đúng mới được qua!`
         );
-        localStorage.setItem('week01.logic.stage02.misconception', 'logic_and_partial');
+        recordStageError(2, 'logic_and_partial');
       } else {
         setS2Feedback(
-          `Cửa 1 (Màu Xanh): Sai | Cửa 2 (Số chẵn): Sai. Cả hai điều kiện đều sai nên bị chặn lại.`
+          `Cả hai cửa đều chưa đạt. Cửa 1 (Màu Xanh): Sai | Cửa 2 (Số chẵn): Sai. Với từ VÀ, tất cả điều kiện đều phải đúng mới được qua!`
         );
+        recordStageError(2);
       }
     }
   };
@@ -290,29 +322,44 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
           setS3Done(true);
           awardStageStars(3);
           triggerConfetti();
-          setTimeout(() => {
+          setStagePhase('completed');
+          if (!hasAskedConfidence[3]) {
             setConfidenceStage(3);
-            setShowConfidenceModal(true);
-          }, 1000);
+            console.log('[CONFIDENCE] OPEN EFFECT', {
+              stageCompleted: true,
+              confidence: null,
+              hasAskedConfidence: hasAskedConfidence[3],
+              currentStage: 3,
+            });
+            setTimeout(() => {
+              setShowConfidenceModal(true);
+              setStagePhase('confidence');
+            }, 800);
+          }
         }
       }
     } else {
       setS3Feedback(`Số ${num} không nhỏ hơn 5 và cũng không chia hết cho 4, nên bị dừng lại.`);
-      localStorage.setItem('week01.logic.stage03.misconception', 'or_invalid_candidate');
+      recordStageError(3, 'or_invalid_candidate');
     }
   };
 
   // --- STAGE 4 HANDLERS ---
+  const [s4BlockedCards, setS4BlockedCards] = useState<number[]>([]);
+
   const handleS4CardClick = (card: CardItem) => {
     const isSquare = card.shape === 'square';
     if (isSquare) {
-      setS4Feedback('🚫 Thẻ này mang đặc điểm bị cấm (hình Vuông) nên phải dừng lại!');
-      localStorage.setItem('week01.logic.stage04.misconception', 'not_confusion');
+      if (!s4BlockedCards.includes(card.id)) {
+        setS4BlockedCards((prev) => [...prev, card.id]);
+      }
+      setS4Feedback('🚫 Thẻ này có hình Vuông nên phải dừng lại.');
+      recordStageError(4, 'not_confusion');
     } else {
       if (!s4PassedCards.includes(card.id)) {
         const next = [...s4PassedCards, card.id];
         setS4PassedCards(next);
-        setS4Feedback('✅ Đúng rồi! Thẻ này không mang đặc điểm bị cấm.');
+        setS4Feedback('✅ Đúng! Thẻ này không phải hình Vuông.');
         // 6 non-square cards (3 circles + 3 triangles)
         if (next.length === 6) {
           setS4Done(true);
@@ -343,8 +390,8 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
       setS5Feedback('✅ Tuyệt vời! Con đã lọc đúng hai thẻ màu ĐỎ (Thẻ A và Thẻ B).');
       setS5Step(2);
     } else {
-      setS5Feedback('Con nhìn lại màu sắc: Chỉ giữ lại những thẻ có màu ĐỎ (Thẻ A và Thẻ B) nhé!');
-      localStorage.setItem('week01.logic.stage05.misconception', 'skips_filtering');
+      setS5Feedback('Thử kiểm từng điều kiện một nhé: Chỉ giữ lại những thẻ có màu ĐỎ (Thẻ A và Thẻ B)!');
+      recordStageError(5, 'skips_filtering');
     }
   };
 
@@ -358,6 +405,7 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
       }, 700);
     } else {
       setS5Feedback('Thẻ A có hình Tròn, đâu phải hình Vuông! Con chỉ loại thẻ có hình Vuông thôi.');
+      recordStageError(5, 'skips_filtering');
     }
   };
 
@@ -365,7 +413,7 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
     setS5FinalChoice(cardId);
     if (cardId === 501) {
       // 501 is Card A
-      setS5Feedback('🎯 Xuất sắc! Con không cần đoán. Chỉ cần lọc từng điều kiện là tìm ra Thẻ A!');
+      setS5Feedback('🎯 Con không cần đoán. Chỉ cần lọc từng điều kiện là tìm ra Thẻ A!');
       awardStageStars(5);
       triggerConfetti();
       setTimeout(() => {
@@ -373,6 +421,7 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
       }, 1200);
     } else {
       setS5Feedback('Chưa đúng rồi. Sau khi lọc màu Đỏ và bỏ hình Vuông, chỉ còn lại Thẻ A thôi!');
+      recordStageError(5, 'skips_filtering');
     }
   };
 
@@ -393,10 +442,20 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
         if (next.length >= 2 && next.includes(12) && next.includes(18)) {
           setS5BonusDone(true);
           triggerBigWinConfetti();
-          setTimeout(() => {
+          setStagePhase('completed');
+          if (!hasAskedConfidence[5]) {
             setConfidenceStage(5);
-            setShowConfidenceModal(true);
-          }, 1000);
+            console.log('[CONFIDENCE] OPEN EFFECT', {
+              stageCompleted: true,
+              confidence: null,
+              hasAskedConfidence: hasAskedConfidence[5],
+              currentStage: 5,
+            });
+            setTimeout(() => {
+              setShowConfidenceModal(true);
+              setStagePhase('confidence');
+            }, 800);
+          }
         }
       }
     } else {
@@ -417,16 +476,48 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
   };
 
   // Handle confidence selection
-  const handleSelectConfidence = (level: 'confident' | 'guessing' | 'confused') => {
-    const key = `week01.logic.stage0${confidenceStage}.confidence`;
-    localStorage.setItem(key, level);
-    setShowConfidenceModal(false);
+  const handleSelectConfidence = (level: string) => {
+    console.log('[CONFIDENCE] CLICK', level);
+    console.log('[CONFIDENCE] CLOSING');
 
-    if (confidenceStage === 3) {
-      switchStage(4);
-    } else if (confidenceStage === 5) {
-      handleFinishMission();
+    const targetStage = confidenceStage;
+
+    // 1. Immediately close modal synchronously & update flags
+    setShowConfidenceModal(false);
+    setHasAskedConfidence((prev) => ({ ...prev, [targetStage]: true }));
+    setStagePhase('ready-next');
+
+    // 2. Persist safely
+    try {
+      const storageKey = `week01.logic.stage0${targetStage}.confidence`;
+      localStorage.setItem(storageKey, level);
+      const stageFullKey = `week01.logic.stage0${targetStage}`;
+      const prev = JSON.parse(localStorage.getItem(stageFullKey) || '{}');
+      localStorage.setItem(
+        stageFullKey,
+        JSON.stringify({
+          ...prev,
+          confidence: level,
+        })
+      );
+      console.log(
+        '[CONFIDENCE] SAVED',
+        storageKey,
+        localStorage.getItem(storageKey)
+      );
+    } catch (error) {
+      console.error(error);
     }
+
+    // 3. Advance to next stage smoothly
+    requestAnimationFrame(() => {
+      console.log('[CONFIDENCE] NEXT', targetStage);
+      if (targetStage === 3) {
+        switchStage(4);
+      } else if (targetStage === 5) {
+        handleFinishMission();
+      }
+    });
   };
 
   // Total stars calculated
@@ -463,32 +554,32 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
     );
   };
 
-  // Hints per stage
-  const stageHints: Record<number, string[]> = {
+  // Hints per stage with exact 3 levels
+  const stageHints: Record<number, { title: string; text: string }[]> = {
     1: [
-      'Gợi ý 1: Nhìn vào màu sắc của thẻ trước tiên.',
-      'Gợi ý 2: Cổng chỉ nhận màu xanh dương. Hãy bỏ qua thẻ màu đỏ và màu vàng.',
-      'Cùng làm nhé: Thẻ số 4, số 5 và số 8 đều có màu Xanh!',
+      { title: 'Gợi ý nhỏ', text: 'Nhìn vào màu sắc của thẻ trước tiên.' },
+      { title: 'Gợi ý thêm', text: 'Cổng chỉ nhận màu Xanh. Bỏ qua thẻ màu Đỏ và màu Vàng.' },
+      { title: 'Cùng làm một bước nhé', text: 'Thẻ số 4, số 5 và số 8 đều có màu Xanh!' },
     ],
     2: [
-      'Gợi ý 1: Kiểm tra từng cửa một cách riêng biệt.',
-      'Gợi ý 2: Với từ VÀ, cả hai cửa đều phải ĐÚNG (vừa màu Xanh, vừa số Chẵn).',
-      'Cùng làm nhé: Thẻ Xanh số 4 và thẻ Xanh số 6 đều là số chẵn!',
+      { title: 'Gợi ý nhỏ', text: 'Kiểm tra từng điều kiện riêng.' },
+      { title: 'Gợi ý thêm', text: 'Với VÀ, cả hai cửa đều phải qua.' },
+      { title: 'Cùng làm một bước nhé', text: 'Hãy tìm thẻ vừa Xanh vừa Chẵn.' },
     ],
     3: [
-      'Gợi ý 1: Với luật HOẶC, chỉ cần vượt qua ÍT NHẤT MỘT cửa là được.',
-      'Gợi ý 2: Thẻ thỏa mãn CẢ HAI cửa (như số 4) vẫn được chọn nhé!',
-      'Cùng làm nhé: Số 2 (< 5), số 4 (< 5 và chia hết cho 4), số 8 và 12 (chia hết cho 4) đều được qua.',
+      { title: 'Gợi ý nhỏ', text: 'Một thẻ chỉ cần vượt qua một cửa.' },
+      { title: 'Gợi ý thêm', text: 'Thẻ vượt qua cả hai cửa vẫn được chọn.' },
+      { title: 'Cùng làm một bước nhé', text: 'Kiểm tra từng số một: 2, 4, 8, 12.' },
     ],
     4: [
-      'Gợi ý 1: Tìm đặc điểm bị cấm trước.',
-      'Gợi ý 2: Biển cấm hình Vuông, nên ta loại bỏ tất cả các thẻ hình Vuông.',
-      'Cùng làm nhé: Tất cả các thẻ hình Tròn và Tam giác đều được đi qua cổng!',
+      { title: 'Gợi ý nhỏ', text: 'Tìm những hình bị cấm trước.' },
+      { title: 'Gợi ý thêm', text: 'Bỏ tất cả hình Vuông.' },
+      { title: 'Cùng làm một bước nhé', text: 'Giữ lại Tròn và Tam giác.' },
     ],
     5: [
-      'Gợi ý 1: Đừng đoán mò! Hãy lọc lần lượt từng điều kiện.',
-      'Gợi ý 2: Bước 1 tìm màu Đỏ trước (Thẻ A, B). Bước 2 loại thẻ Vuông (Thẻ B).',
-      'Cùng làm nhé: Sau hai bước lọc, chỉ còn lại Thẻ A!',
+      { title: 'Gợi ý nhỏ', text: 'Thử kiểm từng điều kiện một nhé.' },
+      { title: 'Gợi ý thêm', text: 'Bước 1 tìm màu Đỏ trước. Bước 2 loại hình Vuông.' },
+      { title: 'Cùng làm một bước nhé', text: 'Chỉ giữ lại Thẻ A vừa Đỏ vừa Tròn.' },
     ],
   };
 
@@ -530,14 +621,15 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
 
           <div className="flex flex-col sm:flex-row items-center gap-5">
             <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-4xl sm:text-5xl shadow-inner shrink-0">
-              🤖
+              🚦
             </div>
             <div className="space-y-1.5">
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
                 Cổng Logic
               </h1>
               <p className="text-sm sm:text-base text-blue-100 font-medium">
-                “Chào Thám tử! Có rất nhiều thẻ bài muốn đi qua cổng. Con hãy giúp chọn đúng thẻ nhé!”
+                Có rất nhiều thẻ muốn đi qua cổng.<br />
+                Con hãy giúp chọn đúng nhé!
               </p>
             </div>
           </div>
@@ -548,12 +640,12 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
             {[1, 2, 3, 4, 5].map((st) => (
               <span
                 key={st}
-                className={`w-3 h-3 rounded-full transition-all ${
-                  stagesDone[st]
-                    ? 'bg-emerald-400 ring-2 ring-emerald-300'
-                    : 'bg-white/30'
+                className={`text-base font-black transition-all ${
+                  stagesDone[st] ? 'text-emerald-400' : 'text-white/40'
                 }`}
-              />
+              >
+                ●
+              </span>
             ))}
           </div>
 
@@ -609,31 +701,30 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
             </h2>
             <p className="text-sm text-slate-600 font-medium max-w-md mx-auto">
               Huy hiệu danh dự: <strong>NGƯỜI GÁC CỔNG</strong> 🛡️
+              <br />
+              <span className="text-xs text-slate-500">Con biết kiểm tra từng điều kiện.</span>
             </p>
           </div>
 
           {/* 3 Key Takeaways */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2 max-w-md mx-auto text-xs sm:text-sm text-slate-700 font-semibold">
-            <div className="font-black text-slate-900 mb-1 text-center sm:text-left">
-              3 điều Thám tử vừa làm chủ:
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Kiểm tra từng điều kiện</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Kiểm tra từng điều kiện riêng biệt.</span>
+              <span>Hiểu VÀ – HOẶC – KHÔNG</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Hiểu sâu sắc cách hoạt động của VÀ – HOẶC – KHÔNG.</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Lọc từng bước cẩn thận thay vì đoán mò.</span>
+              <span>Lọc từng bước thay vì đoán</span>
             </div>
           </div>
 
           {/* Stars tally */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 font-black text-sm">
-            <span>⭐ Sao khám phá đã đạt:</span>
+            <span>⭐ Sao khám phá:</span>
             <span className="text-amber-600 text-base">{totalEarnedStars} / 15</span>
           </div>
 
@@ -650,19 +741,11 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
 
             <button
               type="button"
-              onClick={() => onNavigate?.('/')}
-              className="w-full sm:w-auto min-h-[46px] px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-            >
-              <span>🏠 Về Trang chủ</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => switchStage(1)}
               className="w-full sm:w-auto min-h-[46px] px-5 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
-              <span>Chơi lại</span>
+              <span>🔄 Chơi lại Cổng Logic</span>
             </button>
           </div>
         </div>
@@ -1156,6 +1239,7 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
             <div className="grid grid-cols-3 gap-2.5">
               {s4Cards.map((card) => {
                 const isPassed = s4PassedCards.includes(card.id);
+                const isBlocked = s4BlockedCards.includes(card.id);
                 return (
                   <button
                     key={card.id}
@@ -1164,6 +1248,8 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
                     className={`min-h-[105px] p-2.5 rounded-2xl border-2 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer relative ${
                       isPassed
                         ? 'border-emerald-500 bg-emerald-50/70 ring-3 ring-emerald-200 shadow-sm'
+                        : isBlocked
+                        ? 'border-rose-300 bg-rose-50/40 opacity-70'
                         : card.shape === 'square'
                         ? 'border-slate-200 bg-slate-50/40 hover:border-rose-300'
                         : 'border-slate-200 hover:border-blue-300 bg-white'
@@ -1174,6 +1260,11 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
                         ✓
                       </span>
                     )}
+                    {isBlocked && (
+                      <span className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-rose-500 text-white flex items-center justify-center text-[10px] font-black">
+                        ✕
+                      </span>
+                    )}
                     {renderShapeIcon(card.shape, card.color)}
                     <span className="text-xs sm:text-sm font-black text-slate-800">
                       Số {card.number}
@@ -1181,6 +1272,57 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
                   </button>
                 );
               })}
+            </div>
+
+            {/* 2 Sorting Zones */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-200">
+                <div className="text-xs font-black text-emerald-900 flex items-center justify-between mb-1.5">
+                  <span>✅ Được qua</span>
+                  <span className="text-[11px] font-bold text-emerald-700">{s4PassedCards.length}/6 thẻ</span>
+                </div>
+                {s4PassedCards.length === 0 ? (
+                  <div className="text-[11px] text-slate-400 font-medium italic py-1">
+                    Bấm các thẻ không phải hình Vuông...
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {s4PassedCards.map((cid) => {
+                      const c = s4Cards.find((x) => x.id === cid);
+                      if (!c) return null;
+                      return (
+                        <span key={cid} className="px-2 py-1 rounded-lg bg-white border border-emerald-300 text-emerald-800 text-[11px] font-bold">
+                          Số {c.number} ({c.shape === 'circle' ? 'Tròn' : 'Tam giác'})
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <div className="p-3 rounded-2xl bg-rose-50/70 border border-rose-200">
+                <div className="text-xs font-black text-rose-900 flex items-center justify-between mb-1.5">
+                  <span>🚫 Dừng lại</span>
+                  <span className="text-[11px] font-bold text-rose-700">{s4BlockedCards.length}/3 thẻ</span>
+                </div>
+                {s4BlockedCards.length === 0 ? (
+                  <div className="text-[11px] text-slate-400 font-medium italic py-1">
+                    Thẻ hình Vuông sẽ bị dừng ở đây...
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {s4BlockedCards.map((cid) => {
+                      const c = s4Cards.find((x) => x.id === cid);
+                      if (!c) return null;
+                      return (
+                        <span key={cid} className="px-2 py-1 rounded-lg bg-white border border-rose-300 text-rose-800 text-[11px] font-bold">
+                          Số {c.number} (Vuông)
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Feedback */}
@@ -1475,17 +1617,19 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
             <div className="p-4 rounded-3xl bg-amber-50/70 border border-amber-200 space-y-3 text-xs sm:text-sm">
               <div className="flex items-center justify-between">
                 <span className="font-black text-amber-950 flex items-center gap-1">
-                  <span>Trợ giúp Thám tử • Mức {hintLevel}/3</span>
+                  <span>
+                    💡 {stageHints[currentStage]?.[hintLevel - 1]?.title || `Mức ${hintLevel}/3`}
+                  </span>
                 </span>
-                <span className="text-[11px] text-amber-700">
+                <span className="text-[11px] text-amber-700 font-bold">
                   {hintLevel === 1
                     ? '⭐ Giữ được 2 sao'
                     : '⭐ Giữ được 1 sao'}
                 </span>
               </div>
 
-              <div className="p-3 rounded-2xl bg-white border border-amber-200 text-slate-800 leading-relaxed font-medium">
-                {stageHints[currentStage]?.[hintLevel - 1] || 'Hãy quan sát kỹ các thẻ bài nhé!'}
+              <div className="p-3 rounded-2xl bg-white border border-amber-200 text-slate-800 leading-relaxed font-semibold">
+                {stageHints[currentStage]?.[hintLevel - 1]?.text || 'Hãy quan sát kỹ các thẻ bài nhé!'}
               </div>
 
               {hintLevel < 3 && (
@@ -1493,9 +1637,9 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
                   <button
                     type="button"
                     onClick={() => setHintLevel(hintLevel + 1)}
-                    className="min-h-[44px] px-3.5 py-1.5 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-950 font-bold text-xs cursor-pointer"
+                    className="min-h-[44px] px-4 py-2 rounded-xl bg-amber-200 hover:bg-amber-300 text-amber-950 font-black text-xs cursor-pointer shadow-2xs transition-colors"
                   >
-                    Gợi ý thêm một chút nữa →
+                    {hintLevel === 1 ? 'Gợi ý thêm →' : 'Cùng làm một bước nhé →'}
                   </button>
                 </div>
               )}
@@ -1527,7 +1671,7 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
               <button
                 type="button"
                 onClick={() => handleSelectConfidence('confident')}
-                className="w-full min-h-[44px] px-4 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                className="w-full min-h-[44px] px-4 py-2.5 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 font-bold text-xs sm:text-sm flex items-center justify-between gap-2 cursor-pointer transition-colors pointer-events-auto"
               >
                 <span>😎 Con biết cách làm</span>
               </button>
@@ -1535,7 +1679,7 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
               <button
                 type="button"
                 onClick={() => handleSelectConfidence('guessing')}
-                className="w-full min-h-[44px] px-4 py-2.5 rounded-2xl bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-900 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                className="w-full min-h-[44px] px-4 py-2.5 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 font-bold text-xs sm:text-sm flex items-center justify-between gap-2 cursor-pointer transition-colors pointer-events-auto"
               >
                 <span>🤔 Con phải thử một chút</span>
               </button>
@@ -1543,9 +1687,17 @@ export function LogicGateSimulator({ onNavigate }: LogicGateSimulatorProps) {
               <button
                 type="button"
                 onClick={() => handleSelectConfidence('confused')}
-                className="w-full min-h-[44px] px-4 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-900 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                className="w-full min-h-[44px] px-4 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-900 font-bold text-xs sm:text-sm flex items-center justify-between gap-2 cursor-pointer transition-colors pointer-events-auto"
               >
-                <span>🆘 Con vẫn chưa hiểu lắm</span>
+                <span>🆘 Con vẫn chưa hiểu</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSelectConfidence('skipped')}
+                className="w-full min-h-[44px] px-4 py-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 font-bold text-xs sm:text-sm flex items-center justify-between gap-2 cursor-pointer transition-colors pointer-events-auto"
+              >
+                <span>⏩ Để sau →</span>
               </button>
             </div>
           </div>
